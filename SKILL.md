@@ -1,19 +1,19 @@
 ---
 name: daily-ai-news
-description: Generate a daily AI news briefing from verified web sources, format it as a structured Markdown report, and optionally publish it to WeChat Official Account drafts or sync it to Feishu/Lark Docs. Use when the user asks for AI daily news, AI news roundup, AI industry briefing, AI热点日报, 每日AI资讯, AI日报, or asks to collect and distribute recent AI news.
+description: Generate a verified daily AI news briefing as a structured Markdown report. Use when the user asks for AI daily news, AI news roundup, AI industry briefing, AI热点日报, 每日AI资讯, AI日报, or wants recent AI news collected, verified, deduplicated, and written into Markdown.
 ---
 
 # Daily AI News
 
-Create a reliable daily AI news briefing: collect recent AI news, verify key facts, select the most relevant items, write a polished Markdown report, then optionally publish it to configured channels.
+Create a reliable daily AI news briefing in Markdown. The core task ends when the Markdown report is generated. Publishing to Feishu/Lark, WeChat, a website, or any other channel is downstream work that should only happen when the user explicitly asks for it.
 
 ## Principles
 
 - Prioritize accuracy over speed. Verify dates, original sources, company names, model names, funding amounts, and quoted statements.
 - Prefer primary or authoritative sources: company blogs, research papers, official repositories, regulatory filings, credible media, and direct social posts.
 - Do not invent news, quotes, rankings, dates, or links. If a claim cannot be verified, exclude it or mark it clearly as unconfirmed.
-- Keep publishing optional. A user may only want a Markdown report, a Feishu sync, a WeChat draft, or the full workflow.
-- Never expose secrets. Read credentials from environment variables or a local `.env` file, and do not write them into generated reports.
+- Deduplicate by underlying event rather than headline.
+- Use fewer strong items instead of padding the report with weak or stale news.
 
 ## Workflow
 
@@ -21,14 +21,13 @@ Create a reliable daily AI news briefing: collect recent AI news, verify key fac
 
 Use today's local date unless the user gives a specific date or date range.
 
-Decide the output mode from the user request:
+Default output:
 
-- `report`: generate Markdown only.
-- `wechat`: generate Markdown and create a WeChat Official Account draft.
-- `feishu`: generate Markdown and sync to Feishu/Lark Docs.
-- `all`: generate Markdown, create WeChat draft, and sync to Feishu/Lark Docs.
+```text
+ai-news-YYYY-MM-DD.md
+```
 
-If the user does not specify a mode, default to `report`.
+If the user asks for a different language, output path, or section structure, follow that request while preserving verification quality.
 
 ### 2. Collect Sources
 
@@ -45,9 +44,9 @@ For source strategy and verification rules, read `references/sources.md` when co
 
 ### 3. Select and Verify
 
-Build a candidate list, then deduplicate by underlying event rather than headline.
+Build a candidate list, then keep only the items with enough source support and editorial value.
 
-For each selected item, keep:
+For each selected item, track:
 
 - Title
 - Category
@@ -56,13 +55,11 @@ For each selected item, keep:
 - Publication date or evidence that the event is current
 - Verification note for sensitive claims such as funding, layoffs, legal issues, model performance, and quotes
 
-Target 18-25 strong items. Use fewer if the day is quiet; do not pad with weak or stale news.
+Target 18-25 strong items. Use fewer if the day is quiet.
 
-### 4. Write the Report
+### 4. Write the Markdown Report
 
-Create `ai-news-YYYY-MM-DD.md` in the working directory unless the user requests another path.
-
-Use the format in `references/format.md`.
+Use the structure in `references/format.md`.
 
 Writing standards:
 
@@ -72,42 +69,27 @@ Writing standards:
 - Keep each item grounded in at least one direct URL.
 - Avoid generic AI phrasing such as "值得注意的是", "可以预见", "总而言之", and unsupported grand conclusions.
 
-### 5. Optional: Publish to WeChat
-
-Only publish when the user asks for WeChat output or mode is `wechat` or `all`.
-
-Before publishing, read `references/wechat-publish.md`.
-
-Required configuration is documented in `references/configuration.md`.
-
-After publishing, report the draft status and returned draft or media identifier if available.
-
-### 6. Optional: Sync to Feishu/Lark
-
-Only sync when the user asks for Feishu/Lark output or mode is `feishu` or `all`.
-
-Before syncing, read `references/feishu-sync.md`.
-
-Required configuration is documented in `references/configuration.md`.
-
-After syncing, report the target document and whether the operation succeeded.
-
-### 7. Final Response
+### 5. Final Response
 
 Tell the user:
 
 - Where the Markdown report was created.
-- How many candidate items were reviewed and how many were selected, if known.
-- Which channels were published or skipped.
-- Any verification gaps or failed sources.
+- How many items were selected.
+- Which important sources failed or could not be verified, if any.
+- That downstream publishing or rendering can be done next if the user wants it.
 
-## Configuration
+## Optional Downstream Work
 
-For portable usage, copy `.env.example` to `.env` and fill only the channels you plan to use.
+Do not sync, publish, or render the report unless the user explicitly asks.
 
-Never commit `.env`, credentials, private document URLs, local access tokens, or personal QR codes.
+Common downstream choices:
 
-Read `references/configuration.md` before running publication or sync steps.
+- Sync the Markdown report to Feishu/Lark Docs.
+- Convert the Markdown report into an HTML briefing page.
+- Adapt the report for WeChat Official Account drafts.
+- Convert the report into another editorial or publishing format.
+
+If the user asks for an HTML page, use `references/html-style.md` as the visual style guide unless they provide another design.
 
 ## Failure Handling
 
@@ -117,6 +99,4 @@ Read `references/configuration.md` before running publication or sync steps.
 | News date unclear | Exclude it unless it is clearly relevant to the target date. |
 | Duplicate coverage | Keep the strongest source and merge useful context. |
 | Quote cannot be traced | Do not quote it; summarize only what is verified. |
-| WeChat credentials missing | Generate the Markdown report and explain that WeChat publishing was skipped. |
-| Feishu/Lark auth expired | Ask the user to re-authenticate locally, then retry sync if possible. |
-| Publication partially succeeds | Preserve the Markdown report and report the exact failed channel. |
+| Quiet news day | Publish fewer items and say the selection was intentionally conservative. |

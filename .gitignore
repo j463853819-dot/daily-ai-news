@@ -5,6 +5,7 @@
 
 # Generated reports
 ai-news-*.md
+ai-news-*.html
 
 # Logs and temporary files
 *.log
